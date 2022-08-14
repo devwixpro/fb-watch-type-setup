@@ -1,0 +1,28 @@
+{
+  "name": "watch_time",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/bot.js",
+    "start-runner": "node src/runner.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/fs-extra": "^9.0.13",
+    "@types/node-cron": "^3.0.2",
+    "@types/rimraf": "^3.0.2",
+    "playwright": "^1.25.0"
+  },
+  "dependencies": {
+    "fs-extra": "^10.1.0",
+    "node-cron": "^3.0.1",
+    "node-fetch": "^3.2.10",
+    "readjson": "^2.2.2",
+    "rimraf": "^3.0.2",
+    "uuid": "^8.3.2"
+  }
+}
