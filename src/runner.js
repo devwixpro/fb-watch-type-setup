@@ -1,7 +1,8 @@
-import { chromium, firefox, webkit } from "playwright";
+import { chromium, firefox, webkit, devices } from "playwright";
 import fse from 'fs-extra'
 import fs from 'fs';
 import nodeCron from "node-cron";
+const chrome = devices['Desktop Chrome'];
 
 const generateProfiles = async () => {
   const dir = "./profiles/";
@@ -10,7 +11,7 @@ const generateProfiles = async () => {
     const dirPath = dir.concat(`userDataDir-${index}`);
     const pathExists = await fse.pathExists(dirPath);
     if (!pathExists) {
-      fse.remove(dirPath);
+      fse.removeSync(dirPath);
     }
     await fse.ensureDir(dirPath);
     paths.push(dirPath);
@@ -50,58 +51,81 @@ const readCookies = async () => {
   });
   return cookies;
 }
+let contexts = [];
+let pages = [];
 
 async function setup() {
   const profilesPaths = await generateProfiles();
+  const pathToExtension = 'v1 video loop fast speed';
   const videoUrl =
-    "https://findsocialsx.vercel.app";
-  const contexts = [];
-  const pages = [];
+    "https://finezts.com/elementor-11/";
   const cookies = await readCookies();
   profilesPaths.map(async (profileDirPath, index) => {
-    const ctx = await firefox.launchPersistentContext(profileDirPath, {
+    const ctx = await chromium.launchPersistentContext(profileDirPath, {
+      ...chrome,
       headless: false,
+      chromiumSandbox: true,
+      javaScriptEnabled: true,
+      reducedMotion: "reduce",
+      serviceWorkers: "block",
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
+      slowMo: 1000,
+      args: [
+        `--disable-extensions-except=${pathToExtension}`,
+        `--load-extension=${pathToExtension}`
+      ]
     });
-    ctx.clearCookies();
-    ctx.clearPermissions();
-    ctx.addCookies(cookies[index]);
+    await ctx.clearCookies();
+    await ctx.clearPermissions();
+    await ctx.addCookies(cookies[index]);
     const page = await ctx.newPage();
-    await page.goto(videoUrl, { waitUntil: "load" });
-    page.waitForSelector(`//*[iframe]`);
-    const arrayOfLocators = await page.locator('//*[iframe]');
-    const elementCount = await arrayOfLocators.count();
-    for (let i = 0; i < elementCount; i++) {
-      await arrayOfLocators.nth(i).click();
-    }
+    await page.goto(videoUrl, { waitUntil: "networkidle" });
+    // page.waitForSelector("input[aria-label='Play video']", { timeout: 40000 });
+    await page.$$eval("input[aria-label='Play video']", (els) => {
+      console.log(els.length());
+      els.forEach(el => el.click());
+    }).catch(() => {
+      console.log("error");
+    }).then(() => {
+      console.log("done");
+    });
     await sleep(3000);
     pages.push(page);
     contexts.push(ctx);
   });
-  return [pages, contexts];
 }
-let pages, contexts;
+
+const removeProfiles = async () => {
+  const dir = "./profiles";
+  const pathExists = await fse.pathExists(dir);
+  if (!pathExists) return;
+  if (pathExists) {
+    console.log("removing existing profiles");
+    await fse.removeSync(dir);
+  }
+};
+
 let isRan = false;
-nodeCron.schedule("40 */20 * * * *", async () => {
+nodeCron.schedule("*/1 * * * *", async () => {
   console.log("runned");
+  removeProfiles();
   try {
-    [pages, contexts] = await setup();
+    await setup();
     isRan = true;
   } catch (error) {
     console.log(error);
   }
 })
-
-nodeCron.schedule("*/20 * * * *", async () => { 
-  if (!(pages?.length || contexts?.length)) {
-    return;
-  }
+nodeCron.schedule("50 */1 * * * *", async () => { 
+  console.log(pages, contexts);
   if (isRan) {
-    pages.map((page, index) => {
-      page.close();
+      pages.map((page, index) => {
+      pages[index].close();
       contexts[index].close();
     });
-    pages = null;
-    contexts = null;
+    pages = [];
+    contexts = [];
+    removeProfiles();
   }
   isRan = false;
 });
