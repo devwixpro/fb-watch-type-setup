@@ -82,10 +82,10 @@ async function setup() {
             serviceWorkers: "block",
             userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
             slowMo: 1000,
-            args: [
-                `--disable-extensions-except=${pathToExtension}`,
-                `--load-extension=${pathToExtension}`
-            ]
+            // args: [
+            //     `--disable-extensions-except=${pathToExtension}`,
+            //     `--load-extension=${pathToExtension}`
+            // ]
         },
         );
         await ctx.clearCookies();
