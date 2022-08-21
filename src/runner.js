@@ -74,7 +74,9 @@ async function setup() {
         `--disable-extensions-except=${pathToExtension}`,
         `--load-extension=${pathToExtension}`
       ]
-    });
+    },
+    executablePath = '/usr/bin/google-chrome',
+    );
     await ctx.clearCookies();
     await ctx.clearPermissions();
     await ctx.addCookies(cookies[index]);
