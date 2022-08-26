@@ -5,19 +5,22 @@ import nodeCron from "node-cron";
 import bunyan from 'bunyan';
 
 const chrome = devices['Desktop Chrome'];
-const log = bunyan.createLogger({name: "watch-time-bot", level: 'info', streams: [
-    {
-      level: 'info',
-      path: 'myapp-run.log'         // log INFO and above to stdout
-    },
-    {
-      level: 'error',
-      path: 'myapp-error.log'  // log ERROR and above to a file
-    }
-  ]});
+const log = bunyan.createLogger({
+    name: "watch-time-bot", level: 'info', streams: [
+        {
+            level: 'info',
+            path: 'myapp-run.log'         // log INFO and above to stdout
+        },
+        {
+            level: 'error',
+            path: 'myapp-error.log'  // log ERROR and above to a file
+        }
+    ]
+});
 
 const generateProfiles = async () => {
     log.info("generating profile directories");
+    removeProfiles();
     const dir = "./profiles/";
     const paths = [];
     for (let index = 1; index <= 2; index++) {
@@ -61,48 +64,43 @@ const readCookies = async () => {
     log.info("cookies read");
     return cookies;
 }
-let contexts = [];
-let pages = [];
+const contexts = [];
+const pages = [];
 
 async function setup() {
     const profilesPaths = await generateProfiles();
-    const pathToExtension = 'v1 video loop fast speed';
+    const pathToExtension = 'D:/7.6.0.0_0';
     const videoUrl =
-        "https://finezts.com/elementor-11/";
-    // const cookies = await readCookies();
-    let index = 1;
+        "https://findsocialsx.vercel.app/";
+    const cookies = await readCookies();
+    let index = 0;
     for await (const profileDirPath of profilesPaths) {
         log.info(`setting up profile-${index}`);
         const ctx = await chromium.launchPersistentContext(profileDirPath, {
             ...chrome,
+            executablePath: "D:/chrome.exe",
             headless: false,
-            chromiumSandbox: true,
             javaScriptEnabled: true,
             reducedMotion: "reduce",
             serviceWorkers: "block",
-            userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
-            slowMo: 1000,
-            // args: [
-            //     `--disable-extensions-except=${pathToExtension}`,
-            //     `--load-extension=${pathToExtension}`
-            // ]
+            proxy: {
+                server: "207.228.46.58:43814",
+                username: "vAP2WXXt23fvbeg",
+                password: "UAS4POhrcZEPe0R",
+            },
         },
         );
         await ctx.clearCookies();
         await ctx.clearPermissions();
-        // await ctx.addCookies(cookies[index]);
+        await ctx.addCookies(cookies.pop());
         const page = await ctx.newPage();
-        await page.goto(videoUrl, { waitUntil: "networkidle" , timeout: 600000});
-        // // page.waitForSelector("input[aria-label='Play video']", { timeout: 40000 });
-        // await page.$$eval("input[aria-label='Play video']", (els) => {
-        //   console.log(els.length());
-        //   els.forEach(el => el.click());
-        // }).catch(() => {
-        //   console.log("error");
-        // }).then(() => {
-        //   console.log("done");
-        // });
-        await sleep(5* 1000);
+        await page.reload().catch(e=>undefined)
+        await page.goto(videoUrl, { waitUntil: "networkidle", timeout: 4000000 });
+        await sleep(10000)
+        // await page.waitForSelector("input[aria-label='Play video']", { timeout: 40000 });
+        const elements = await page.$$("div>div>iframe");
+        elements.map(el => { el.click(); })
+        await sleep(5 * 1000);
         pages.push(page);
         contexts.push(ctx);
         log.info(`profile-${index} setup complete`);
@@ -116,30 +114,36 @@ const removeProfiles = async () => {
     const pathExists = await fse.pathExists(dir);
     if (!pathExists) return;
     if (pathExists) {
-        await fse.removeSync(dir);
+        fse.removeSync(dir);
     }
     log.info("profile directories removed");
 };
 
-const main = async () => {
-    removeProfiles();
-    setup();
-    await sleep(1 * 60 * 1000);
+const main = async() => {
+    await removeProfiles();
+    await setup();
+    await sleep(900000);
     let index = 0;
-    for await (const context of contexts) {
-        log.info(`closing profile-${index+1}`);
-        await context.close();
-        await pages[index].close();
-        await sleep(3000);
+    for await (const page of pages){
+        await page.close();
         index = index + 1;
     }
+    index=0;
+    for await (const context of contexts) {
+        log.info(`closing profile-${index + 1}`);
+        await context.close();
+        index = index + 1;
+    }
+    await removeProfiles();
 }
-nodeCron.schedule("*/2 * * * *", async () => {
-  log.info("cron job started");
-  try {
-    await main();
-  } catch (error) {
-    log.error(error);
-  }
-  log.info("cron job finished");
-})
+
+nodeCron.schedule("*/20 * * * *",async () => {
+    log.info("cron job started");
+    try {
+        await removeProfiles();
+        await main();
+    } catch (error) {
+        log.error(error);
+    }
+    log.info("cron job finished");
+});
